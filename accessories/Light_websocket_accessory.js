@@ -3,7 +3,7 @@ var Service = require('../').Service;
 var Characteristic = require('../').Characteristic;
 var uuid = require('../').uuid;
 const WebSocket = require('ws');
-const loggingEnabled = false;
+const loggingEnabled = true;
 
 var statusCallbacks = [];
 var ws;
@@ -24,6 +24,7 @@ function connectWebSocket() {
   ws = new WebSocket('ws://TomLight.lan:81');
   ws.on('open', function open() {
       retryInterval = 0;
+      ws.ping('', false, true);
   	  log('WebSocket opened');
   });
 
@@ -44,6 +45,22 @@ function connectWebSocket() {
       callback(null, data == "1");
     }
   });
+  
+  ws.on('pong', function pong() {
+    ws.isAlive = true;
+    
+    setTimeout(function () {
+      ws.ping('', false, true);
+      ws.isAlive = false;
+      
+      setTimeout(function () {
+        if (ws.isAlive === false) {
+          ws._socket.destroy();
+          connectWebSocket();
+        }
+      }, 5000);
+    }, 5000);
+  });
 }
 
 function registerAccessory() {
@@ -59,7 +76,7 @@ function registerAccessory() {
     serialNumber: "AA1234567", //serial number (optional)
   	
     setPower: function(status, callback) { //set power of accessory
-    log("Turning the '%s' %s", this.name, status ? "on" : "off");
+    log("Turning the " + this.name + " " + (status ? "on" : "off"));
   	  ws.send(status ? "1" : "0", function ack(error) {
         if (!error) {
           callback();
@@ -79,7 +96,7 @@ function registerAccessory() {
     },
   	
     identify: function(callback) { //identify the accessory
-  	  log("Identifying the '%s'", this.name);
+  	  log("Identifying the " + this.name);
       ws.send("i", function ack(error) {
         if (!error) {
           callback();
