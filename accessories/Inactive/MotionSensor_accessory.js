@@ -9,7 +9,7 @@ var MOTION_SENSOR = {
 
   getStatus: function() {
     //set the boolean here, this will be returned to the device
-    MOTION_SENSOR.motionDetected = false;
+    MOTION_SENSOR.motionDetected = true;
   },
   identify: function() {
     console.log("Identify the motion sensor!");
@@ -41,6 +41,8 @@ motionSensor.on('identify', function(paired, callback) {
   callback(); // success
 });
 
+var counter = 0
+
 motionSensor
   .addService(Service.MotionSensor, "Fake Motion Sensor") // services exposed to the user should have "names" like "Fake Motion Sensor" for us
   .getCharacteristic(Characteristic.MotionDetected)
@@ -48,3 +50,17 @@ motionSensor
      MOTION_SENSOR.getStatus();
      callback(null, Boolean(MOTION_SENSOR.motionDetected));
 });
+
+// update the characteristic value so interested iOS devices can get notified
+motionSensor
+.getService(Service.MotionSensor)
+.setCharacteristic(Characteristic.MotionDetected, Boolean(false));
+
+setTimeout(function() {
+			
+			// update the characteristic value so interested iOS devices can get notified
+			motionSensor
+			.getService(Service.MotionSensor)
+			.setCharacteristic(Characteristic.MotionDetected, Boolean(true));
+			
+}, 10000);

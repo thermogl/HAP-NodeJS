@@ -12,6 +12,16 @@ storage.initSync();
 // Our Accessories will each have their own HAP server; we will assign ports sequentially
 var targetPort = 51826;
 
+// Start WebSocket server
+const WebSocket = require('ws');
+const wss = new WebSocket.Server({ port: targetPort++ });
+
+wss.on('connection', function connection(ws) {
+	ws.on('message', function incoming(message) {
+		  console.log('received: %s', message);
+	});
+});
+
 // Load up all accessories in the /accessories folder
 var dir = path.join(__dirname, "accessories");
 var accessories = accessoryLoader.loadDirectory(dir);
