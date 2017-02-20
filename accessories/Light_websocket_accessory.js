@@ -3,18 +3,19 @@ var Service = require('../').Service;
 var Characteristic = require('../').Characteristic;
 var uuid = require('../').uuid;
 const WebSocket = require('ws');
+const loggingEnabled = false;
 
 var statusCallbacks = [];
 var ws;
 
 var retryInterval = 0;
 
-console.log('Starting Light Accessory');
+log('Starting Light Accessory');
 connectWebSocket();
 registerAccessory();
 
 function connectWebSocket() {
-  console.log("Connecting WebSocket");
+  log("Connecting WebSocket");
   
   if (retryInterval < 10000) {
     retryInterval += 1000;
@@ -23,20 +24,20 @@ function connectWebSocket() {
   ws = new WebSocket('ws://TomLight.lan:81');
   ws.on('open', function open() {
       retryInterval = 0;
-  	  console.log('WebSocket opened');
+  	  log('WebSocket opened');
   });
 
   ws.on('close', function close(code, reason) {
-  	  console.log('WebSocket closed: ' + reason);
+  	  log('WebSocket closed: ' + reason);
   });
 
   ws.on('error', function error(error) {
-  	  console.log('WebSocket error: ' + error.toString());
+  	  log('WebSocket error: ' + error.toString());
       setTimeout(connectWebSocket, retryInterval);
   });
 
   ws.on('message', function incoming(data, flags) {
-    console.log("Got status: " + (data == "1" ? "on" : "off"));
+    log("Got status: " + (data == "1" ? "on" : "off"));
     if (statusCallbacks.length > 0) {
       var callback = statusCallbacks[0];
       statusCallbacks.splice(0, 1);
@@ -47,7 +48,7 @@ function connectWebSocket() {
 
 function registerAccessory() {
   
-  console.log("Registering Accessory");
+  log("Registering Accessory");
   
   var LightController = {
     name: "WebSocket Light", //name of accessory
@@ -56,10 +57,9 @@ function registerAccessory() {
     manufacturer: "Tom", //manufacturer (optional)
     model: "v1.0", //model (optional)
     serialNumber: "AA1234567", //serial number (optional)
-    outputLogs: true, //output logs
   	
     setPower: function(status, callback) { //set power of accessory
-  	  if(this.outputLogs) console.log("Turning the '%s' %s", this.name, status ? "on" : "off");
+    log("Turning the '%s' %s", this.name, status ? "on" : "off");
   	  ws.send(status ? "1" : "0", function ack(error) {
         if (!error) {
           callback();
@@ -68,7 +68,7 @@ function registerAccessory() {
     },
   	
     getPower: function(callback) { //get power of accessory
-      if(this.outputLogs) console.log("Getting status...");
+      log("Getting status...");
       statusCallbacks.push(callback);
       ws.send("?", function ack(error) {
         if (error) {
@@ -79,7 +79,7 @@ function registerAccessory() {
     },
   	
     identify: function(callback) { //identify the accessory
-  	  if(this.outputLogs) console.log("Identifying the '%s'", this.name);
+  	  log("Identifying the '%s'", this.name);
       ws.send("i", function ack(error) {
         if (!error) {
           callback();
@@ -117,4 +117,10 @@ function registerAccessory() {
     .on('get', function(callback) {
       LightController.getPower(callback)
     });
+}
+
+function log(message) {
+  if (loggingEnabled){
+    console.log(message);    
+  }
 }
