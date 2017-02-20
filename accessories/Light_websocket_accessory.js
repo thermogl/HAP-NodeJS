@@ -4,8 +4,10 @@ var Characteristic = require('../').Characteristic;
 var uuid = require('../').uuid;
 const WebSocket = require('ws');
 
-var callbackArray = [];
+var statusCallbacks = [];
 var ws;
+
+var retryInterval = 0;
 
 console.log('Starting Light Accessory');
 connectWebSocket();
@@ -14,8 +16,13 @@ registerAccessory();
 function connectWebSocket() {
   console.log("Connecting WebSocket");
   
+  if (retryInterval < 10000) {
+    retryInterval += 1000;
+  }
+  
   ws = new WebSocket('ws://TomLight.lan:81');
   ws.on('open', function open() {
+      retryInterval = 0;
   	  console.log('WebSocket opened');
   });
 
@@ -25,13 +32,14 @@ function connectWebSocket() {
 
   ws.on('error', function error(error) {
   	  console.log('WebSocket error: ' + error.toString());
+      setTimeout(connectWebSocket, retryInterval);
   });
 
   ws.on('message', function incoming(data, flags) {
     console.log("Got status: " + (data == "1" ? "on" : "off"));
-    if (callbackArray.length > 0) {
-      var callback = callbackArray[0];
-      callbackArray.splice(0, 1);
+    if (statusCallbacks.length > 0) {
+      var callback = statusCallbacks[0];
+      statusCallbacks.splice(0, 1);
       callback(null, data == "1");
     }
   });
@@ -53,8 +61,6 @@ function registerAccessory() {
     setPower: function(status, callback) { //set power of accessory
   	  if(this.outputLogs) console.log("Turning the '%s' %s", this.name, status ? "on" : "off");
   	  ws.send(status ? "1" : "0", function ack(error) {
-        // If error is not defined, the send has been completed, otherwise the error
-        // object will indicate what failed.
         if (!error) {
           callback();
         }
@@ -63,17 +69,22 @@ function registerAccessory() {
   	
     getPower: function(callback) { //get power of accessory
       if(this.outputLogs) console.log("Getting status...");
-      callbackArray.push(callback);
+      statusCallbacks.push(callback);
       ws.send("?", function ack(error) {
         if (error) {
-          callbackArray.splice(0, 1);
+          statusCallbacks.splice(0, 1);
           callback(error, false);
         }
       });
     },
   	
-    identify: function() { //identify the accessory
-  	  if(this.outputLogs) console.log("Identify the '%s'", this.name);
+    identify: function(callback) { //identify the accessory
+  	  if(this.outputLogs) console.log("Identifying the '%s'", this.name);
+      ws.send("i", function ack(error) {
+        if (!error) {
+          callback();
+        }
+      });
     }
   }
   
@@ -91,8 +102,7 @@ function registerAccessory() {
 
   // listen for the "identify" event for this Accessory
   lightAccessory.on('identify', function(paired, callback) {
-    LightController.identify();
-    callback();
+    LightController.identify(callback);
   });
 
   // Add the actual Lightbulb Service and listen for change events from iOS.
