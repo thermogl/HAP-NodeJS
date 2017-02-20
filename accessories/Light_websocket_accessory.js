@@ -17,8 +17,8 @@ registerAccessory();
 function connectWebSocket() {
   log("Connecting WebSocket");
   
-  if (retryInterval < 10000) {
-    retryInterval += 1000;
+  if (retryInterval < 30000) {
+    retryInterval += 2500;
   }
   
   ws = new WebSocket('ws://TomLight.lan:81');
