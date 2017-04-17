@@ -120,19 +120,6 @@ function registerAccessory() {
 	thermostatAccessory.on('identify', function(paired, callback) {
 		ThermostatController.identify(callback);
 	});
-
-	// Add the actual Thermostat Service and listen for change events from iOS.
-	// We can see the complete list of Services and Characteristics in `lib/gen/HomeKitTypes.js`
-	thermostatAccessory
-		.addService(Service.Lightbulb, ThermostatController.name) // services exposed to the user should have "names" like "Thermostat" for this case
-		.getCharacteristic(Characteristic.On)
-		.on('set', function(value, callback) {
-			LightController.setPower(value, callback);
-		})
-
-		.on('get', function(callback) {
-			LightController.getPower(callback)
-		});
 		
 	thermostatAccessory
 		.addService(Service.Thermostat, ThermostatController.name)
