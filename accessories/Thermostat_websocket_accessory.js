@@ -11,7 +11,7 @@ var ws;
 var retryInterval = 0;
 
 log('Starting Thermostat Accessory');
-connectWebSocket();
+//connectWebSocket();
 registerAccessory();
 
 function connectWebSocket() {
