@@ -65,7 +65,7 @@ function connectWebSocket() {
 
 function registerAccessory() {
   
-  log("Registering Accessory");
+  log("Registering Light");
   
   var LightController = {
     name: "WebSocket Light", //name of accessory

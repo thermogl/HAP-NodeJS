@@ -65,7 +65,7 @@ function connectWebSocket() {
 
 function registerAccessory() {
 	
-	log("Registering Accessory");
+	log("Registering Thermostat");
 	
 	var ThermostatController = {
 		name: "WebSocket Thermostat", //name of accessory
