@@ -70,7 +70,7 @@ function registerAccessory() {
 	var ThermostatController = {
 		name: "WebSocket Thermostat", //name of accessory
 		pincode: "012-34-567",
-		username: "FA:3C:ED:5A:1A:1C", // MAC like address used by HomeKit to differentiate accessories.
+		username: "FB:1C:EF:5F:1A:1C", // MAC like address used by HomeKit to differentiate accessories.
 		manufacturer: "Tom", //manufacturer (optional)
 		model: "v1.0", //model (optional)
 		serialNumber: "AA1234568", //serial number (optional)
