@@ -165,7 +165,7 @@ function registerAccessory() {
 	
 	thermostatAccessory
 		.getService(Service.Thermostat)
-		.getCharacteristic(Characteritic.TemperatureDisplayUnits)
+		.getCharacteristic(Characteristic.TemperatureDisplayUnits)
 		.on('get', function(callback) {
 			callback(null, Characteristic.TemperatureDisplayUnits.CELSIUS);
 		});
