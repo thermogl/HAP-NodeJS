@@ -134,6 +134,8 @@ function registerAccessory() {
     .on('get', function(callback) {
       LightController.getPower(callback)
     });
+    
+    log("Finished");
 }
 
 function log(message) {
