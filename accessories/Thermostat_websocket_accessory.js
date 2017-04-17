@@ -124,14 +124,18 @@ function registerAccessory() {
 	thermostatAccessory
 		.addService(Service.Thermostat, ThermostatController.name)
 		.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
-		.on('set', function(value, callback) {
-			log(value)
-			callback();	
-		})
-		
 		.on('get', function(callback) {
+			log("getting current heating cooling state");
 			callback(1);	
-		})
+		});
+		
+	thermostatAccessory
+		.addService(Service.Thermostat, ThermostatController.name)
+		.getCharacteristic(Characteristic.CurrentTemperature)
+		.on('get', function(callback) {
+			log("getting current temp");
+			callback(20);
+		});
 }
 
 function log(message) {
