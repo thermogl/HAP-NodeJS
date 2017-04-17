@@ -136,7 +136,7 @@ function registerAccessory() {
 		.getCharacteristic(Characteristic.CurrentTemperature)
 		.on('get', function(callback) {
 			log("getting current temp");
-			callback(20);
+			callback("20");
 		});
 }
 
