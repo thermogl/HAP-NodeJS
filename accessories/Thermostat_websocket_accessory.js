@@ -118,6 +118,7 @@ function registerAccessory() {
 
 	// listen for the "identify" event for this Accessory
 	thermostatAccessory.on('identify', function(paired, callback) {
+		log("Identifying Thermostat");
 		//ThermostatController.identify(callback);
 	});
 		
@@ -125,19 +126,42 @@ function registerAccessory() {
 		.addService(Service.Thermostat, ThermostatController.name)
 		.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
 		.on('get', function(callback) {
-			log("getting current heating cooling state");
+			log("Getting CURRENT heating cooling state");
 			callback(null, Characteristic.CurrentHeatingCoolingState.OFF);	
 		});
 		
+	thermostatAccessory
+		.getService(Service.Thermostat)
+		.getCharacteristic(Characteristic.TargetHeatingCoolingState)
+		.on('get', function(callback) {
+			log("Getting TARGET heating cooling state");
+			callback(null, Characteristic.TargetHeatingCoolingState.HEAT);
+		})
+		.on('set', function(value, callback) {
+			log("Setting TARGET heating cooling state to " + value.toString());
+			callback();
+		});
 		
 		
 	thermostatAccessory
 		.getService(Service.Thermostat)
 		.getCharacteristic(Characteristic.CurrentTemperature)
 		.on('get', function(callback) {
-			log("getting current temp");
+			log("Getting current temp");
 			callback(null, 20);
 		});
+		
+	thermostatAccessory
+		.getService(Service.Thermostat)
+		.getCharacteristic(Characteristic.TargetTemperature)
+		.on('get', function(callback) {
+			log("Getting TARGET temp");
+			callback(null, 20);
+		})
+		.on('set', function(value, callback) {
+			log("Setting TARGET temp to " + value.toString());
+			callback();
+		});	
 }
 
 function log(message) {
