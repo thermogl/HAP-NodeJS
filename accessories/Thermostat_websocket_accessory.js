@@ -162,6 +162,13 @@ function registerAccessory() {
 			log("Setting TARGET temp to " + value.toString());
 			callback();
 		});	
+	
+	thermostatAccessory
+		.getService(Service.Thermostat)
+		.getCharacteristic(Characteritic.TemperatureDisplayUnits)
+		.on('get', function(callback) {
+			callback(null, Characteristic.TemperatureDisplayUnits.CELSIUS);
+		});
 }
 
 function log(message) {
