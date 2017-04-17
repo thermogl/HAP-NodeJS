@@ -118,7 +118,7 @@ function registerAccessory() {
 
 	// listen for the "identify" event for this Accessory
 	thermostatAccessory.on('identify', function(paired, callback) {
-		ThermostatController.identify(callback);
+		//ThermostatController.identify(callback);
 	});
 		
 	thermostatAccessory
