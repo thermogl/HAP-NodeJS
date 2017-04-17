@@ -126,7 +126,7 @@ function registerAccessory() {
 		.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
 		.on('get', function(callback) {
 			log("getting current heating cooling state");
-			callback(1);	
+			callback(null, Characteristic.CurrentHeatingCoolingState.OFF);	
 		});
 		
 		
@@ -136,7 +136,7 @@ function registerAccessory() {
 		.getCharacteristic(Characteristic.CurrentTemperature)
 		.on('get', function(callback) {
 			log("getting current temp");
-			callback("20");
+			callback(null, 20);
 		});
 }
 
