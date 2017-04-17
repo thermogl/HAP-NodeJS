@@ -129,8 +129,10 @@ function registerAccessory() {
 			callback(1);	
 		});
 		
+		
+		
 	thermostatAccessory
-		.addService(Service.Thermostat, ThermostatController.name)
+		.getService(Service.Thermostat)
 		.getCharacteristic(Characteristic.CurrentTemperature)
 		.on('get', function(callback) {
 			log("getting current temp");
