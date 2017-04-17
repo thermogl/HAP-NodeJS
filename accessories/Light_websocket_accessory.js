@@ -128,7 +128,6 @@ function registerAccessory() {
     .addService(Service.Lightbulb, LightController.name) // services exposed to the user should have "names" like "Light" for this case
     .getCharacteristic(Characteristic.On)
     .on('set', function(value, callback) {
-      log("settttttt");
       LightController.setPower(value, callback);
     })
 
