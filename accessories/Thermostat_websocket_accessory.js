@@ -5,17 +5,19 @@ var uuid = require('../').uuid;
 const WebSocket = require('ws');
 const loggingEnabled = true;
 
-var statusCallbacks = [];
+var tempCallbacks = [];
+var modeCallbacks = [];
 var ws;
+var thermostatAccessory;
 
 var retryInterval = 0;
 
 log('Starting Thermostat Accessory');
-//connectWebSocket();
+connectWebSocket();
 registerAccessory();
 
 function connectWebSocket() {
-	log("Connecting WebSocket");
+	log("Connecting Thermostat WebSocket");
 	
 	if (retryInterval < 30000) {
 		retryInterval += 2500;
@@ -25,24 +27,49 @@ function connectWebSocket() {
 	ws.on('open', function open() {
 			retryInterval = 0;
 			ws.ping('', false, true);
-		  log('WebSocket opened');
+		  log('Thermostat WebSocket opened');
 	});
 
 	ws.on('close', function close(code, reason) {
-		  log('WebSocket closed: ' + reason);
+		  log('Thermostat WebSocket closed: ' + reason);
 	});
 
 	ws.on('error', function error(error) {
-		  log('WebSocket error: ' + error.toString());
+		  log('Thermostat WebSocket error: ' + error.toString());
 			setTimeout(connectWebSocket, retryInterval);
 	});
 
 	ws.on('message', function incoming(data, flags) {
-		log("Got status: " + data);
-		if (statusCallbacks.length > 0) {
-			var callback = statusCallbacks[0];
-			statusCallbacks.splice(0, 1);
-			callback(null, data);
+		
+		log("Got response: " + data);
+		
+		if (data.length > 1) {
+			var firstChar = data.substr(0, 1);
+			var stringValue = data.substr(1, data.length - 1);
+			var intValue = parseInt(stringValue, 10);
+			
+			if (firstChar == "t" && tempCallbacks.length > 0) {
+				var callback = tempCallbacks[0];
+				tempCallbacks.splice(0, 1);
+				callback(null, intValue);
+			}
+			else if (firstChar == "m" && modeCallbacks.length > 0) {
+				var callback = modeCallbacks[0];
+				modeCallbacks.splice(0, 1);
+				callback(null, intValue);
+			}
+			else if (firstChar == "s") {
+				log("Temp changed to " + stringValue);	
+				thermostatAccessory
+					.getService(Service.Thermostat)
+					.setCharacteristic(Characteristic.TargetTemperature, intValue);
+			}
+			else if (firstChar == "o") {
+				log("Mode changed to " + stringValue);
+				thermostatAccessory
+					.getService(Service.Thermostat)
+					.setCharacteristic(Characteristic.TargetHeatingCoolingState, intValue);
+			}
 		}
 	});
 	
@@ -76,8 +103,8 @@ function registerAccessory() {
 		serialNumber: "AA1234568", //serial number (optional)
 		
 		setTemperature: function(temp, callback) {
-			log("Setting " + this.name + " to: " + temp);
-			ws.send("s" + temp, function ack(error) {
+			log("Setting " + this.name + "temp to: " + temp);
+			ws.send("t" + temp.toString(), function ack(error) {
 				if (!error) {
 					callback();	
 				}
@@ -86,9 +113,30 @@ function registerAccessory() {
 		
 		getTemperature: function(callback) {
 			log("Getting temperature...");
-			ws.send("?", function ack(error) {
+			tempCallbacks.push(callback);
+			ws.send("t?", function ack(error) {
 				if (error) {
-					statusCallbacks.splice(0, 1);
+					tempCallbacks.splice(0, 1);
+					callback(error, 0);	
+				}
+			});	
+		},
+		
+		setMode: function(mode, callback) {
+			log("Setting " + this.name + "mode to: " + mode);
+			ws.send("m" + temp.toString(), function ack(error) {
+				if (!error) {
+					callback();	
+				}
+			});	
+		},
+		
+		getMode: function(callback) {
+			log("Getting mode...");
+			modeCallbacks.push(callback);
+			ws.send("m?", function ack(error) {
+				if (error) {
+					modeCallbacks.splice(0, 1);
 					callback(error, 0);	
 				}
 			});	
@@ -105,7 +153,7 @@ function registerAccessory() {
 	}
 	
 	var thermostatUUID = uuid.generate('tom:accessories:thermostat' + ThermostatController.name);
-	var thermostatAccessory = exports.accessory = new Accessory(ThermostatController.name, thermostatUUID);
+	thermostatAccessory = exports.accessory = new Accessory(ThermostatController.name, thermostatUUID);
 	thermostatAccessory.username = ThermostatController.username;
 	thermostatAccessory.pincode = ThermostatController.pincode;
 
@@ -135,7 +183,7 @@ function registerAccessory() {
 		.getCharacteristic(Characteristic.TargetHeatingCoolingState)
 		.on('get', function(callback) {
 			log("Getting TARGET heating cooling state");
-			callback(null, Characteristic.TargetHeatingCoolingState.HEAT);
+			callback(null, Characteristic.TargetHeatingCoolingState.OFF);
 		})
 		.on('set', function(value, callback) {
 			log("Setting TARGET heating cooling state to " + value.toString());
