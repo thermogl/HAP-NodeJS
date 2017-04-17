@@ -10,7 +10,7 @@ var ws;
 
 var retryInterval = 0;
 
-log('Starting Light Accessory');
+log('Starting Thermostat Accessory');
 connectWebSocket();
 registerAccessory();
 
