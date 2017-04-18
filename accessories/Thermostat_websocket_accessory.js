@@ -192,8 +192,7 @@ function registerAccessory() {
 		.addService(Service.Thermostat, ThermostatController.name)
 		.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
 		.on('get', function(callback) {
-			callback(null, Characteristic.CurrentHeatingCoolingState.OFF);
-			//ThermostatController.getMode(callback);
+			ThermostatController.getMode(callback);
 		});
 		
 	thermostatAccessory
