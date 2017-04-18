@@ -123,7 +123,6 @@ function registerAccessory() {
 			targetCallbacks.push(callback);
 			ws.send("t?", function ack(error) {
 				if (error) {
-					log("error" + error);
 					targetCallbacks.splice(0, 1);
 					callback(error, 0);	
 				}
@@ -193,7 +192,8 @@ function registerAccessory() {
 		.addService(Service.Thermostat, ThermostatController.name)
 		.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
 		.on('get', function(callback) {
-			ThermostatController.getMode(callback);
+			callback(null, Characteristic.CurrentHeatingCoolingState.OFF);
+			//ThermostatController.getMode(callback);
 		});
 		
 	thermostatAccessory
