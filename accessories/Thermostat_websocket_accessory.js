@@ -217,6 +217,7 @@ function registerAccessory() {
 		.getService(Service.Thermostat)
 		.getCharacteristic(Characteristic.TargetTemperature)
 		.on('get', function(callback) {
+			// For this not to return error, the temp must be more 10
 			ThermostatController.getTargetTemperature(callback);
 		})
 		.on('set', function(value, callback) {
