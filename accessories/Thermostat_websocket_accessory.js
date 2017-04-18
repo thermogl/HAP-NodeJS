@@ -6,6 +6,7 @@ const WebSocket = require('ws');
 const loggingEnabled = true;
 
 var tempCallbacks = [];
+var targetCallbacks = [];
 var modeCallbacks = [];
 var ws;
 var thermostatAccessory;
@@ -48,14 +49,19 @@ function connectWebSocket() {
 			var stringValue = data.substr(1, data.length - 1);
 			var intValue = parseInt(stringValue, 10);
 			
-			if (firstChar == "t" && tempCallbacks.length > 0) {
-				var callback = tempCallbacks[0];
-				tempCallbacks.splice(0, 1);
+			if (firstChar == "t" && targetCallbacks.length > 0) {
+				var callback = targetCallbacks[0];
+				targetCallbacks.splice(0, 1);
 				callback(null, intValue);
 			}
 			else if (firstChar == "m" && modeCallbacks.length > 0) {
 				var callback = modeCallbacks[0];
 				modeCallbacks.splice(0, 1);
+				callback(null, intValue);
+			}
+			else if (firstChar == "r" && tempCallbacks.length > 0) {
+				var callback = tempCallbacks[0];
+				tempCallbacks.splice(0, 1);
 				callback(null, intValue);
 			}
 			else if (firstChar == "s") {
@@ -102,7 +108,7 @@ function registerAccessory() {
 		model: "v1.0", //model (optional)
 		serialNumber: "AA1234568", //serial number (optional)
 		
-		setTemperature: function(temp, callback) {
+		setTargetTemperature: function(temp, callback) {
 			log("Setting " + this.name + "temp to: " + temp);
 			ws.send("t" + temp.toString(), function ack(error) {
 				if (!error) {
@@ -111,10 +117,21 @@ function registerAccessory() {
 			});	
 		},
 		
-		getTemperature: function(callback) {
-			log("Getting temperature...");
-			tempCallbacks.push(callback);
+		getTargetTemperature: function(callback) {
+			log("Getting target temperature...");
+			targetCallbacks.push(callback);
 			ws.send("t?", function ack(error) {
+				if (error) {
+					targetCallbacks.splice(0, 1);
+					callback(error, 0);	
+				}
+			});	
+		},
+		
+		getCurrentTemperature: function(callback) {
+			log("Getting current temperature");
+			tempCallbacks.push(callback);
+			ws.send("r?", function ack(error) {
 				if (error) {
 					tempCallbacks.splice(0, 1);
 					callback(error, 0);	
@@ -124,7 +141,7 @@ function registerAccessory() {
 		
 		setMode: function(mode, callback) {
 			log("Setting " + this.name + "mode to: " + mode);
-			ws.send("m" + temp.toString(), function ack(error) {
+			ws.send("m" + mode.toString(), function ack(error) {
 				if (!error) {
 					callback();	
 				}
@@ -167,7 +184,7 @@ function registerAccessory() {
 	// listen for the "identify" event for this Accessory
 	thermostatAccessory.on('identify', function(paired, callback) {
 		log("Identifying Thermostat");
-		//ThermostatController.identify(callback);
+		ThermostatController.identify(callback);
 	});
 		
 	thermostatAccessory
@@ -175,7 +192,7 @@ function registerAccessory() {
 		.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
 		.on('get', function(callback) {
 			log("Getting CURRENT heating cooling state");
-			callback(null, Characteristic.CurrentHeatingCoolingState.OFF);	
+			ThermostatController.getMode(callback);
 		});
 		
 	thermostatAccessory
@@ -183,11 +200,11 @@ function registerAccessory() {
 		.getCharacteristic(Characteristic.TargetHeatingCoolingState)
 		.on('get', function(callback) {
 			log("Getting TARGET heating cooling state");
-			callback(null, Characteristic.TargetHeatingCoolingState.OFF);
+			ThermostatController.getMode(callback);
 		})
 		.on('set', function(value, callback) {
 			log("Setting TARGET heating cooling state to " + value.toString());
-			callback();
+			ThermostatController.setMode(value, callback);
 		});
 		
 		
@@ -196,7 +213,7 @@ function registerAccessory() {
 		.getCharacteristic(Characteristic.CurrentTemperature)
 		.on('get', function(callback) {
 			log("Getting current temp");
-			callback(null, 20);
+			ThermostatController.getCurrentTemperature(callback);
 		});
 		
 	thermostatAccessory
@@ -204,11 +221,11 @@ function registerAccessory() {
 		.getCharacteristic(Characteristic.TargetTemperature)
 		.on('get', function(callback) {
 			log("Getting TARGET temp");
-			callback(null, 20);
+			ThermostatController.getTargetTemperature(callback);
 		})
 		.on('set', function(value, callback) {
 			log("Setting TARGET temp to " + value.toString());
-			callback();
+			ThermostatController.setTargetTemperature(value, callback);
 		});
 }
 
