@@ -50,16 +50,19 @@ function connectWebSocket() {
 			var intValue = parseInt(stringValue, 10);
 			
 			if (firstChar == "t" && targetCallbacks.length > 0) {
+				log("Got temp = " + stringValue);
 				var callback = targetCallbacks[0];
 				targetCallbacks.splice(0, 1);
 				callback(null, intValue);
 			}
 			else if (firstChar == "m" && modeCallbacks.length > 0) {
+				log("Got mode = " + stringValue);
 				var callback = modeCallbacks[0];
 				modeCallbacks.splice(0, 1);
 				callback(null, intValue);
 			}
 			else if (firstChar == "r" && tempCallbacks.length > 0) {
+				log("Got reading = " + stringValue);
 				var callback = tempCallbacks[0];
 				tempCallbacks.splice(0, 1);
 				callback(null, intValue);
