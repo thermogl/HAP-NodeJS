@@ -194,7 +194,6 @@ function registerAccessory() {
 		.addService(Service.Thermostat, ThermostatController.name)
 		.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
 		.on('get', function(callback) {
-			log("Getting CURRENT heating cooling state");
 			ThermostatController.getMode(callback);
 		});
 		
@@ -202,11 +201,9 @@ function registerAccessory() {
 		.getService(Service.Thermostat)
 		.getCharacteristic(Characteristic.TargetHeatingCoolingState)
 		.on('get', function(callback) {
-			log("Getting TARGET heating cooling state");
 			ThermostatController.getMode(callback);
 		})
 		.on('set', function(value, callback) {
-			log("Setting TARGET heating cooling state to " + value.toString());
 			ThermostatController.setMode(value, callback);
 		});
 		
@@ -215,7 +212,6 @@ function registerAccessory() {
 		.getService(Service.Thermostat)
 		.getCharacteristic(Characteristic.CurrentTemperature)
 		.on('get', function(callback) {
-			log("Getting current temp");
 			ThermostatController.getCurrentTemperature(callback);
 		});
 		
@@ -223,11 +219,9 @@ function registerAccessory() {
 		.getService(Service.Thermostat)
 		.getCharacteristic(Characteristic.TargetTemperature)
 		.on('get', function(callback) {
-			log("Getting TARGET temp");
 			ThermostatController.getTargetTemperature(callback);
 		})
 		.on('set', function(value, callback) {
-			log("Setting TARGET temp to " + value.toString());
 			ThermostatController.setTargetTemperature(value, callback);
 		});
 }
