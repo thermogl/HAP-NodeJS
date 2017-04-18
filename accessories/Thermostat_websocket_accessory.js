@@ -42,27 +42,25 @@ function connectWebSocket() {
 
 	ws.on('message', function incoming(data, flags) {
 		
-		log("Got response: " + data);
-		
 		if (data.length > 1) {
 			var firstChar = data.substr(0, 1);
 			var stringValue = data.substr(1, data.length - 1);
 			var intValue = parseInt(stringValue, 10);
 			
 			if (firstChar == "t" && targetCallbacks.length > 0) {
-				log("Got temp = " + stringValue);
+				log("Got temp: " + intValue.toString());
 				var callback = targetCallbacks[0];
 				targetCallbacks.splice(0, 1);
 				callback(null, intValue);
 			}
 			else if (firstChar == "m" && modeCallbacks.length > 0) {
-				log("Got mode = " + stringValue);
+				log("Got mode: " + intValue.toString());
 				var callback = modeCallbacks[0];
 				modeCallbacks.splice(0, 1);
 				callback(null, intValue);
 			}
 			else if (firstChar == "r" && tempCallbacks.length > 0) {
-				log("Got reading = " + stringValue);
+				log("Got reading: " + intValue.toString());
 				var callback = tempCallbacks[0];
 				tempCallbacks.splice(0, 1);
 				callback(null, intValue);
@@ -125,6 +123,7 @@ function registerAccessory() {
 			targetCallbacks.push(callback);
 			ws.send("t?", function ack(error) {
 				if (error) {
+					log("error" + error);
 					targetCallbacks.splice(0, 1);
 					callback(error, 0);	
 				}
