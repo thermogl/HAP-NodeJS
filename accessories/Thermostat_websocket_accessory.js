@@ -144,6 +144,9 @@ function registerAccessory() {
 			log("Setting " + this.name + "mode to: " + mode);
 			ws.send("m" + mode.toString(), function ack(error) {
 				if (!error) {
+					thermostatAccessory
+						.getService(Thermostat.Service)
+						.setCharacteristic(Characteristic.CurrentHeatingCoolingState, mode);
 					callback();	
 				}
 			});	
