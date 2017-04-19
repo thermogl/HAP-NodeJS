@@ -196,8 +196,7 @@ function registerAccessory() {
 		.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
 		.on('get', function(callback) {
 			ThermostatController.getMode(callback);
-		})
-		.valid-values = [0, 1];
+		});
 		
 	thermostatAccessory
 		.getService(Service.Thermostat)
