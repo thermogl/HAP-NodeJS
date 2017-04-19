@@ -145,7 +145,7 @@ function registerAccessory() {
 			ws.send("m" + mode.toString(), function ack(error) {
 				if (!error) {
 					thermostatAccessory
-						.getService(Thermostat.Service)
+						.getService(Service.Thermostat)
 						.setCharacteristic(Characteristic.CurrentHeatingCoolingState, mode);
 					callback();	
 				}
