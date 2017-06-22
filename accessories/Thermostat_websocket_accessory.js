@@ -8,6 +8,7 @@ const loggingEnabled = true;
 var tempCallbacks = [];
 var targetCallbacks = [];
 var modeCallbacks = [];
+var humidityCallbacks = [];
 var ws;
 var thermostatAccessory;
 
@@ -65,6 +66,12 @@ function connectWebSocket() {
 				tempCallbacks.splice(0, 1);
 				callback(null, intValue);
 			}
+			else if (firstChar == "h" && humidityCallbacks.length > 0) {
+				log("Got humidity: " + intValue.toString());
+				var callback = humidityCallbacks[0];
+				humidityCallbacks.splice(0, 1);
+				callback(null, intValue);	
+			}
 			else if (firstChar == "s") {
 				log("Temp changed to " + stringValue);	
 				thermostatAccessory
@@ -108,6 +115,7 @@ function registerAccessory() {
 		manufacturer: "Tom", //manufacturer (optional)
 		model: "v1.0", //model (optional)
 		serialNumber: "AA1234568", //serial number (optional)
+		humidityName: "Humidity Sensor",
 		
 		setTargetTemperature: function(temp, callback) {
 			log("Setting " + this.name + "temp to: " + temp);
@@ -163,6 +171,17 @@ function registerAccessory() {
 			});	
 		},
 		
+		getHumidity: function(callback) {
+			log("Getting humidity...");
+			humidityCallbacks.push(callback);
+			ws.send("h?", function ack(error) {
+				if (error) {
+					humidityCallbacks.splice(0, 1);
+					callback(error, 0);	
+				}	
+			})
+		},
+		
 		identify: function(callback) { //identify the accessory
 		  log("Identifying the " + this.name);
 			ws.send("i", function ack(error) {
@@ -190,6 +209,13 @@ function registerAccessory() {
 		log("Identifying Thermostat");
 		ThermostatController.identify(callback);
 	});
+	
+	thermostatAccessory
+		.addService(Service.HumiditySensor, ThermostatController.humidityName)
+		.getCharacteristic(Characteristic.CurrentRelativeHumidity)
+		.on('get', function(callback) {
+			ThermostatController.getHumidity(callback);
+		});
 		
 	thermostatAccessory
 		.addService(Service.Thermostat, ThermostatController.name)
