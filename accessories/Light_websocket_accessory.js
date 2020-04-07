@@ -21,7 +21,7 @@ function connectWebSocket() {
     retryInterval += 2500;
   }
   
-  ws = new WebSocket('ws://TomLight.lan:81');
+  ws = new WebSocket('ws://192.168.0.35:81');
   ws.on('open', function open() {
       retryInterval = 0;
       ws.ping('', false, true);
