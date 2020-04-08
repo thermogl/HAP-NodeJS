@@ -25,7 +25,7 @@ function connectWebSocket() {
 		retryInterval += 2500;
 	}
 	
-	ws = new WebSocket('ws://TomThermostat.lan:81');
+	ws = new WebSocket('ws://192.168.0.36:81');
 	ws.on('open', function open() {
 			retryInterval = 0;
 			ws.ping('', false, true);
@@ -216,14 +216,16 @@ function registerAccessory() {
 		.on('get', function(callback) {
 			ThermostatController.getHumidity(callback);
 		});
-		
+	/*	
 	thermostatAccessory
 		.addService(Service.Thermostat, ThermostatController.name)
 		.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
 		.on('get', function(callback) {
 			ThermostatController.getMode(callback);
 		});
-		
+	*/
+	
+	/*	
 	thermostatAccessory
 		.getService(Service.Thermostat)
 		.getCharacteristic(Characteristic.TargetHeatingCoolingState)
@@ -233,15 +235,16 @@ function registerAccessory() {
 		.on('set', function(value, callback) {
 			ThermostatController.setMode(value, callback);
 		});
+	*/
 		
 		
 	thermostatAccessory
-		.getService(Service.Thermostat)
+		.addService(Service.TemperatureSensor, ThermostatController.name)
 		.getCharacteristic(Characteristic.CurrentTemperature)
 		.on('get', function(callback) {
 			ThermostatController.getCurrentTemperature(callback);
 		});
-		
+	/*	
 	thermostatAccessory
 		.getService(Service.Thermostat)
 		.getCharacteristic(Characteristic.TargetTemperature)
@@ -252,6 +255,7 @@ function registerAccessory() {
 		.on('set', function(value, callback) {
 			ThermostatController.setTargetTemperature(value, callback);
 		});
+	*/
 }
 
 function log(message) {
