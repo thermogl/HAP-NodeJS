@@ -1,0 +1,309 @@
+import storage from 'node-persist';
+import util from 'util';
+import assert from 'assert';
+import tweetnacl from 'tweetnacl';
+
+import { Categories } from '../Accessory';
+import { Session } from "../util/eventedhttp";
+
+export enum PermissionTypes {
+  USER = 0x00,
+  ADMIN = 0x01, // admins are the only ones who can add/remove/list pairings (also some characteristics are restricted)
+}
+
+export type PairingInformation = {
+  username: string,
+  publicKey: Buffer,
+  permission: PermissionTypes,
+}
+
+/**
+ * AccessoryInfo is a model class containing a subset of Accessory data relevant to the internal HAP server,
+ * such as encryption keys and username. It is persisted to disk.
+ */
+export class AccessoryInfo {
+
+  static readonly deviceIdPattern: RegExp = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
+
+  username: string;
+  displayName: string;
+  category: Categories;
+  pincode: string;
+  signSk: any;
+  signPk: any;
+  pairedClients: Record<string, PairingInformation>;
+  pairedAdminClients: number;
+  configVersion: number;
+  configHash: string;
+  setupID: string;
+  relayEnabled: boolean;
+  relayState: number;
+  relayAccessoryID: string;
+  relayAdminID: string;
+  relayPairedControllers: Record<string, string>;
+  accessoryBagURL: string;
+
+  private constructor(username: string) {
+    this.username = username;
+    this.displayName = "";
+    // @ts-ignore
+    this.category = "";
+    this.pincode = "";
+    this.signSk = Buffer.alloc(0);
+    this.signPk = Buffer.alloc(0);
+    this.pairedClients = {};
+    this.pairedAdminClients = 0;
+    this.configVersion = 1;
+    this.configHash = "";
+
+    this.setupID = "";
+
+    this.relayEnabled = false;
+    this.relayState = 2;
+    this.relayAccessoryID = "";
+    this.relayAdminID = "";
+    this.relayPairedControllers = {};
+    this.accessoryBagURL = "";
+  }
+
+  /**
+   * Add a paired client to memory.
+   * @param {string} username
+   * @param {Buffer} publicKey
+   * @param {PermissionTypes} permission
+   */
+  addPairedClient = (username: string, publicKey: Buffer, permission: PermissionTypes) => {
+    this.pairedClients[username] = {
+      username: username,
+      publicKey: publicKey,
+      permission: permission
+    };
+
+    if (permission === PermissionTypes.ADMIN)
+      this.pairedAdminClients++;
+  };
+
+  updatePermission = (username: string, permission: PermissionTypes) => {
+    const pairingInformation = this.pairedClients[username];
+
+    if (pairingInformation) {
+      const oldPermission = pairingInformation.permission;
+      pairingInformation.permission = permission;
+
+      if (oldPermission === PermissionTypes.ADMIN && permission !== PermissionTypes.ADMIN) {
+        this.pairedAdminClients--;
+      } else if (oldPermission !== PermissionTypes.ADMIN && permission === PermissionTypes.ADMIN) {
+        this.pairedAdminClients++;
+      }
+    }
+  };
+
+  listPairings = () => {
+    const array = [] as PairingInformation[];
+
+    for (const username in this.pairedClients) {
+      const pairingInformation = this.pairedClients[username] as PairingInformation;
+      array.push(pairingInformation);
+    }
+
+    return array;
+  };
+
+  /**
+   * Remove a paired client from memory.
+   * @param controller - the session of the controller initiated the removal of the pairing
+   * @param {string} username
+   */
+  removePairedClient = (controller: Session, username: string) => {
+    this._removePairedClient0(controller, username);
+
+    if (this.pairedAdminClients === 0) { // if we don't have any admin clients left paired it is required to kill all normal clients
+      for (const username0 in this.pairedClients) {
+        this._removePairedClient0(controller, username0);
+      }
+    }
+  };
+
+  _removePairedClient0 = (controller: Session, username: string) => {
+    if (this.pairedClients[username] && this.pairedClients[username].permission === PermissionTypes.ADMIN)
+      this.pairedAdminClients--;
+    delete this.pairedClients[username];
+
+    if (Object.keys(this.pairedClients).length == 0) {
+      this.relayEnabled = false;
+      this.relayState = 2;
+      this.relayAccessoryID = "";
+      this.relayAdminID = "";
+      this.relayPairedControllers = {};
+      this.accessoryBagURL = "";
+    }
+
+    Session.destroyExistingConnectionsAfterUnpair(controller, username);
+  };
+
+  /**
+   * Check if username is paired
+   * @param username
+   */
+  isPaired = (username: string) => {
+    return !!this.pairedClients[username];
+  };
+
+  hasAdminPermissions = (username: string) => {
+    if (!username) return false;
+    const pairingInformation = this.pairedClients[username];
+    return !!pairingInformation && pairingInformation.permission === PermissionTypes.ADMIN;
+  };
+
+// Gets the public key for a paired client as a Buffer, or falsey value if not paired.
+  getClientPublicKey = (username: string) => {
+    const pairingInformation = this.pairedClients[username];
+    if (pairingInformation) {
+      return pairingInformation.publicKey;
+    } else {
+      return undefined;
+    }
+  };
+
+// Returns a boolean indicating whether this accessory has been paired with a client.
+  paired = (): boolean => {
+    return Object.keys(this.pairedClients).length > 0; // if we have any paired clients, we're paired.
+  }
+
+  updateRelayEnableState = (state: boolean) => {
+    this.relayEnabled = state;
+  }
+
+  updateRelayState = (newState: number) => {
+    this.relayState = newState;
+  }
+
+  addPairedRelayClient = (username: string, accessToken: string) => {
+    this.relayPairedControllers[username] = accessToken;
+  }
+
+  removePairedRelayClient = (username: string) => {
+    delete this.relayPairedControllers[username];
+  }
+
+  save = () => {
+    var saved = {
+      displayName: this.displayName,
+      category: this.category,
+      pincode: this.pincode,
+      signSk: this.signSk.toString('hex'),
+      signPk: this.signPk.toString('hex'),
+      pairedClients: {},
+      // moving permissions into an extra object, so there is nothing to migrate from old files.
+      // if the legac node-persist storage should be upgraded some time, it would be reasonable to combine the storage
+      // of public keys (pairedClients object) and permissions.
+      pairedClientsPermission: {},
+      configVersion: this.configVersion,
+      configHash: this.configHash,
+      setupID: this.setupID,
+      relayEnabled: this.relayEnabled,
+      relayState: this.relayState,
+      relayAccessoryID: this.relayAccessoryID,
+      relayAdminID: this.relayAdminID,
+      relayPairedControllers: this.relayPairedControllers,
+      accessoryBagURL: this.accessoryBagURL
+    };
+
+    for (var username in this.pairedClients) {
+      const pairingInformation = this.pairedClients[username];
+      //@ts-ignore
+      saved.pairedClients[username] = pairingInformation.publicKey.toString('hex');
+      // @ts-ignore
+      saved.pairedClientsPermission[username] = pairingInformation.permission;
+    }
+
+    var key = AccessoryInfo.persistKey(this.username);
+
+    storage.setItemSync(key, saved);
+    storage.persistSync();
+  }
+
+  remove = () => {
+    var key = AccessoryInfo.persistKey(this.username);
+
+    storage.removeItemSync(key);
+  }
+
+// Gets a key for storing this AccessoryInfo in the filesystem, like "AccessoryInfo.CC223DE3CEF3.json"
+  static persistKey = (username: string) => {
+    return util.format("AccessoryInfo.%s.json", username.replace(/:/g, "").toUpperCase());
+  }
+
+  static create = (username: string) => {
+    AccessoryInfo.assertValidUsername(username);
+    var accessoryInfo = new AccessoryInfo(username);
+
+    // Create a new unique key pair for this accessory.
+    var keyPair = tweetnacl.sign.keyPair();
+
+    accessoryInfo.signSk = Buffer.from(keyPair.secretKey);
+    accessoryInfo.signPk = Buffer.from(keyPair.publicKey);
+
+    return accessoryInfo;
+  }
+
+  static load = (username: string) => {
+    AccessoryInfo.assertValidUsername(username);
+
+    var key = AccessoryInfo.persistKey(username);
+    var saved = storage.getItem(key);
+
+    if (saved) {
+      var info = new AccessoryInfo(username);
+      info.displayName = saved.displayName || "";
+      info.category = saved.category || "";
+      info.pincode = saved.pincode || "";
+      info.signSk = Buffer.from(saved.signSk || '', 'hex');
+      info.signPk = Buffer.from(saved.signPk || '', 'hex');
+
+      info.pairedClients = {};
+      for (var username in saved.pairedClients || {}) {
+        var publicKey = saved.pairedClients[username];
+        let permission = saved.pairedClientsPermission? saved.pairedClientsPermission[username]: undefined;
+        if (permission === undefined)
+          permission = PermissionTypes.ADMIN; // defaulting to admin permissions is the only suitable solution, there is no way to recover permissions
+
+        info.pairedClients[username] = {
+          username: username,
+          publicKey: Buffer.from(publicKey, 'hex'),
+          permission: permission
+        };
+        if (permission === PermissionTypes.ADMIN)
+          info.pairedAdminClients++;
+      }
+
+      info.configVersion = saved.configVersion || 1;
+      info.configHash = saved.configHash || "";
+
+      info.setupID = saved.setupID || "";
+
+      info.relayEnabled = saved.relayEnabled || false;
+      info.relayState = saved.relayState || 2;
+      info.relayAccessoryID = saved.relayAccessoryID || "";
+      info.relayAdminID = saved.relayAdminID || "";
+      info.relayPairedControllers = saved.relayPairedControllers || {};
+      info.accessoryBagURL = saved.accessoryBagURL || "";
+
+      return info;
+    }
+    else {
+      return null;
+    }
+  }
+
+  static assertValidUsername = (username: string) => {
+    assert.ok(AccessoryInfo.deviceIdPattern.test(username),
+        "The supplied username (" + username + ") is not valid " +
+        "(expected a format like 'XX:XX:XX:XX:XX:XX' with XX being a valid hexadecimal string). " +
+        "Note that, if you had this accessory already paired with the invalid username, you will need to repair " +
+        "the accessory and reconfigure your services in the Home app. " +
+        "Using an invalid username will lead to unexpected behaviour.")
+  };
+
+}
+
